@@ -11,9 +11,18 @@ class App {
 
         this.canvas = document.getElementById('canvas');
 
+        this.loadedImage = null;
+
         this.boxes = [];
 
+        this.selecting = false;
+        // Box [x0, y0, x1, y1].
+        this.selectingBox = [0, 0, 0, 0];
+        this.selectedBoxIndices = [];
+
         this.bindEvents();
+
+        this.render();
 
     }
 
@@ -27,6 +36,10 @@ class App {
             marginTop: ($('#container').height() - this.canvas.height) / 2,
         });
 
+    }
+
+    isBoxOverlapped(box1, box2) {
+        return !(box1[0] > box2[2] || box1[1] > box2[3] || box2[0] > box1[2] || box2[1] > box1[3]);
     }
 
     bindEvents() {
@@ -46,15 +59,12 @@ class App {
             .then(LoadImage)
             .then((image) => {
 
-                const ctx = this.canvas.getContext('2d');
-
                 this.canvas.width = image.width;
                 this.canvas.height = image.height;
 
-                this.resize();
+                this.loadedImage = image;
 
-                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                ctx.drawImage(image, 0, 0, image.width, image.height);
+                this.resize();
 
             });
 
@@ -67,17 +77,140 @@ class App {
             })
             .then((boxes) => {
 
-                const ctx = this.canvas.getContext('2d');
-
                 this.boxes = boxes;
-
-                for(let box of this.boxes) {
-                    ctx.strokeRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
-                }
 
             });
 
         });
+
+        $(this.canvas).mousedown((event) => {
+
+            this.selecting = true;
+
+            this.selectingBox = [
+                event.offsetX,
+                event.offsetY,
+                0,
+                0,
+            ];
+
+        });
+
+        $(this.canvas).mouseup((event) => {
+
+            if(this.selecting) {
+
+                this.selectingBox[2] = event.offsetX;
+                this.selectingBox[3] = event.offsetY;
+
+                const selectBox = [
+                    Math.min(this.selectingBox[0], this.selectingBox[2]),
+                    Math.min(this.selectingBox[1], this.selectingBox[3]),
+                    Math.max(this.selectingBox[0], this.selectingBox[2]),
+                    Math.max(this.selectingBox[1], this.selectingBox[3]),
+                ];
+
+                this.selectedBoxIndices = this.boxes.map((box, idx) => {
+                    if(this.isBoxOverlapped(box, selectBox)) {
+                        return idx;
+                    }
+                    else {
+                        return -1;
+                    }
+                }).filter(idx => idx != -1);
+
+                this.selectingBox = [0, 0, 0, 0];
+
+                this.selecting = false;
+
+            }
+
+        });
+
+        $(this.canvas).mousemove((event) => {
+
+            if(this.selecting) {
+
+                this.selectingBox[2] = event.offsetX;
+                this.selectingBox[3] = event.offsetY;
+
+            }
+
+        });
+
+    }
+
+    render() {
+
+        requestAnimationFrame(this.render.bind(this));
+
+        const ctx = this.canvas.getContext('2d');
+
+        // Draw loaded image.
+        if(this.loadedImage) {
+
+            ctx.save();
+
+            const image = this.loadedImage;
+
+            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+
+            ctx.restore();
+
+        }
+
+        // Draw bounding boxes.
+        if(this.boxes) {
+
+            ctx.save();
+
+            const boxes = this.boxes;
+
+            for(let box of boxes) {
+                ctx.strokeRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+            }
+
+            ctx.restore();
+
+        }
+
+        // Draw selected bounding boxes.
+        if(this.selectedBoxIndices) {
+
+            ctx.save();
+
+            const indices = this.selectedBoxIndices;
+            const boxes = indices.map(idx => this.boxes[idx]);
+
+            ctx.strokeStyle = 'blue';
+
+            for(let box of boxes) {
+                ctx.strokeRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+            }
+
+            ctx.restore();
+
+        }
+
+        // Draw selecting box.
+        if(this.selecting) {
+
+            ctx.save();
+
+            const box = this.selectingBox;
+
+            if(box[0] && box[1] && box[2] && box[3]) {
+
+                ctx.setLineDash([2, 2]);
+
+                ctx.strokeRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+
+            }
+
+            ctx.restore();
+
+        }
 
     }
 
@@ -120,12 +253,7 @@ class App {
                     return;
                 }
 
-                const box = {
-                    x0: x,
-                    x1: x,
-                    y0: y,
-                    y1: y,
-                };
+                const box = [x, y, x, y];
 
                 // Flood fill.
                 // https://en.wikipedia.org/wiki/Flood_fill
@@ -142,10 +270,10 @@ class App {
                         continue;
                     }
 
-                    box.x0 = Math.min(box.x0, x);
-                    box.x1 = Math.max(box.x1, x);
-                    box.y0 = Math.min(box.y0, y);
-                    box.y1 = Math.max(box.y1, y);
+                    box[0] = Math.min(box[0], x);
+                    box[2] = Math.max(box[2], x);
+                    box[1] = Math.min(box[1], y);
+                    box[3] = Math.max(box[3], y);
 
                     maskes[getIdx(x, y)] = 1;
 
