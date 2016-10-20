@@ -83,6 +83,20 @@ class App {
 
         });
 
+        $('#join').click((event) => {
+
+            this.JoinBoxes()
+            .then((result) => {
+
+                this.boxes = this.boxes.filter((box, idx) => !this.selectedBoxIndices.includes(idx));
+                this.boxes.push(result);
+
+                this.selectedBoxIndices = [];
+
+            });
+
+        });
+
         $(this.canvas).mousedown((event) => {
 
             this.selecting = true;
@@ -316,6 +330,41 @@ class App {
             }
 
             resolve(boxes);
+
+        });
+
+    }
+
+    JoinBoxes() {
+
+        return new Promise((resolve, reject) => {
+
+            const boxes = this.selectedBoxIndices.map(idx => this.boxes[idx]);
+
+            if(boxes.length) {
+
+                const [x0, y0, x1, y1] = boxes[0];
+                const result = [x0, y0, x1, y1];
+
+                for(let i = 1; i < boxes.length; i++) {
+
+                    const box = boxes[i];
+
+                    result[0] = Math.min(result[0], box[0]);
+                    result[1] = Math.min(result[1], box[1]);
+                    result[2] = Math.max(result[2], box[2]);
+                    result[3] = Math.max(result[3], box[3]);
+
+                }
+
+                return resolve(result);
+
+            }
+            else {
+
+                return reject(new Error('ERROR_BOXES_NOT_EXISTS'));
+
+            }
 
         });
 
