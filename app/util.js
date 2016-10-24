@@ -1,4 +1,6 @@
 
+const { dialog } = require('electron').remote;
+
 const Promise = require('bluebird');
 
 function OpenFileDialog() {
@@ -10,11 +12,36 @@ function OpenFileDialog() {
         input.onchange = (event) => {
 
             const file = event.target.files[0];
-            if(file) resolve(file);
-            else reject(new Error('ERROR_OPENING_FILE'));
+            if(file) {
+                return resolve(file);
+            }
+            else {
+                return reject(new Error('ERROR_OPENING_FILE'));
+            }
 
         };
         input.dispatchEvent(new MouseEvent('click'));
+
+    });
+
+}
+
+function SaveDirDialog() {
+
+    return new Promise((resolve, reject) => {
+
+        const path = dialog.showSaveDialog({
+            properties: [
+                'openDirectory',
+            ],
+        });
+
+        if(path) {
+            return resolve(path);
+        }
+        else {
+            return reject(new Error('ERROR_OPENING_DIR'));
+        }
 
     });
 
@@ -51,5 +78,5 @@ function LoadImage(src) {
 }
 
 module.exports = {
-    OpenFileDialog, ReadFileDataURL, LoadImage,
+    OpenFileDialog, SaveDirDialog, ReadFileDataURL, LoadImage,
 };

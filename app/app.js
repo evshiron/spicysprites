@@ -1,9 +1,12 @@
 
+const { join } = require('path');
+const { outputFile } = require('fs-extra');
+
 var Promise = require('bluebird');
 const $ = require('jquery');
 
 const Color = require('./color');
-const { OpenFileDialog, ReadFileDataURL, LoadImage } = require('./util');
+const { OpenFileDialog, SaveDirDialog, ReadFileDataURL, LoadImage } = require('./util');
 
 class App {
 
@@ -93,6 +96,16 @@ class App {
 
                 this.selectedBoxIndices = [];
 
+            });
+
+        });
+
+        $('#export').click((event) => {
+
+            SaveDirDialog()
+            .then((path) => this.ExportSprites(path))
+            .then(() => {
+                alert('Exported.');
             });
 
         });
@@ -365,6 +378,32 @@ class App {
                 return reject(new Error('ERROR_BOXES_NOT_EXISTS'));
 
             }
+
+        });
+
+    }
+
+    ExportSprites(path) {
+
+        return new Promise.map(this.boxes, (box, idx) => {
+
+            return new Promise((resolve, reject) => {
+
+                const [x0, y0, x1, y1] = box;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = x1 - x0;
+                canvas.height = y1 - y0;
+
+                const roCtx = this.canvas.getContext('2d');
+
+                const ctx = canvas.getContext('2d');
+
+                ctx.drawImage(this.canvas, x0, y0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+
+                outputFile(join(path, `${ idx }.png`), new Buffer(canvas.toDataURL('image/png').split(',')[1], 'base64'), resolve);
+
+            });
 
         });
 
