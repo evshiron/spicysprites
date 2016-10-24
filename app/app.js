@@ -58,8 +58,8 @@ class App {
         $('#load').click((event) => {
 
             OpenFileDialog()
-            .then(ReadFileDataURL)
-            .then(LoadImage)
+            .then((path) => ReadFileDataURL(path))
+            .then((url) => LoadImage(url))
             .then((image) => {
 
                 this.canvas.width = image.width;
@@ -138,12 +138,14 @@ class App {
                 ];
 
                 this.selectedBoxIndices = this.boxes.map((box, idx) => {
+
                     if(this.isBoxOverlapped(box, selectBox)) {
                         return idx;
                     }
                     else {
                         return -1;
                     }
+
                 }).filter(idx => idx != -1);
 
                 this.selectingBox = [0, 0, 0, 0];
