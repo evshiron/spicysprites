@@ -14,6 +14,8 @@ class App {
 
         this.canvas = document.getElementById('canvas');
 
+        this.offset = [0, 0];
+
         this.loadedImage = null;
 
         this.boxes = [];
@@ -31,13 +33,19 @@ class App {
 
     resize() {
 
-        $('#container').width(Math.max(window.innerWidth, this.canvas.width));
-        $('#container').height(Math.max(window.innerHeight, this.canvas.height));
+        const width = this.loadedImage ? Math.max(window.innerWidth, this.loadedImage.width) : window.innerWidth;
+        const height = this.loadedImage ? Math.max(window.innerHeight, this.loadedImage.height) : window.innerHeight;
 
-        $(this.canvas).css({
-            marginLeft: ($('#container').width() - this.canvas.width) / 2,
-            marginTop: ($('#container').height() - this.canvas.height) / 2,
-        });
+        $('#container').width(width);
+        $('#container').height(height);
+
+        this.canvas.width = width;
+        this.canvas.height = height;
+
+        this.offset = [
+            this.loadedImage ? (width - this.loadedImage.width) / 2 : 0,
+            this.loadedImage ? (height - this.loadedImage.height) / 2 : 0,
+        ];
 
     }
 
@@ -61,9 +69,6 @@ class App {
             .then((path) => ReadFileDataURL(path))
             .then((url) => LoadImage(url))
             .then((image) => {
-
-                this.canvas.width = image.width;
-                this.canvas.height = image.height;
 
                 this.loadedImage = image;
 
@@ -115,8 +120,8 @@ class App {
             this.selecting = true;
 
             this.selectingBox = [
-                event.offsetX,
-                event.offsetY,
+                event.offsetX - this.offset[0],
+                event.offsetY - this.offset[1],
                 0,
                 0,
             ];
@@ -127,8 +132,8 @@ class App {
 
             if(this.selecting) {
 
-                this.selectingBox[2] = event.offsetX;
-                this.selectingBox[3] = event.offsetY;
+                this.selectingBox[2] = event.offsetX - this.offset[0];
+                this.selectingBox[3] = event.offsetY - this.offset[1];
 
                 const selectBox = [
                     Math.min(this.selectingBox[0], this.selectingBox[2]),
@@ -160,12 +165,31 @@ class App {
 
             if(this.selecting) {
 
-                this.selectingBox[2] = event.offsetX;
-                this.selectingBox[3] = event.offsetY;
+                this.selectingBox[2] = event.offsetX - this.offset[0];
+                this.selectingBox[3] = event.offsetY - this.offset[1];
 
             }
 
         });
+
+    }
+
+    getImageOnlyCanvas() {
+
+        if(!this.loadedImage) {
+            throw new Error('ERROR_NO_LOADED_IMAGE');
+        }
+
+        const canvas = document.createElement('canvas');
+
+        canvas.width = this.loadedImage.width;
+        canvas.height = this.loadedImage.height;
+
+        const ctx = canvas.getContext('2d');
+
+        ctx.drawImage(this.loadedImage, 0, 0, this.loadedImage.width, this.loadedImage.height);
+
+        return canvas;
 
     }
 
@@ -175,14 +199,20 @@ class App {
 
         const ctx = this.canvas.getContext('2d');
 
+        ctx.save();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.translate(...this.offset);
+
         // Draw loaded image.
         if(this.loadedImage) {
 
             ctx.save();
 
+            const canvas = this.canvas;
             const image = this.loadedImage;
 
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             ctx.drawImage(image, 0, 0, image.width, image.height);
 
             ctx.restore();
@@ -241,6 +271,8 @@ class App {
 
         }
 
+        ctx.restore();
+
     }
 
     UnpackCanvas({
@@ -249,12 +281,13 @@ class App {
 
         return new Promise((resolve, reject) => {
 
-            const ctx = this.canvas.getContext('2d');
+            const canvas = this.getImageOnlyCanvas();
+            const ctx = canvas.getContext('2d');
 
-            const data = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
             const getIdx = (x, y) => {
-                return y * this.canvas.width + x;
+                return y * canvas.width + x;
             };
 
             const getColor = (x, y) => {
@@ -266,7 +299,7 @@ class App {
                 const b = data.data[idx * 4 + 2];
                 const a = data.data[idx * 4 + 3];
 
-                const inCanvas = x >= 0 && y >= 0 && x < this.canvas.width && y < this.canvas.height;
+                const inCanvas = x >= 0 && y >= 0 && x < canvas.width && y < canvas.height;
 
                 return inCanvas ? new Color(r, g, b, a) : background;
 
@@ -330,9 +363,9 @@ class App {
 
             };
 
-            for(let y = 0; y < this.canvas.height; y++) {
+            for(let y = 0; y < canvas.height; y++) {
 
-                for(let x = 0; x < this.canvas.width; x++) {
+                for(let x = 0; x < canvas.width; x++) {
 
                     if(getColor(x, y).equals(background) || maskes[getIdx(x, y)]) {
                         continue;
