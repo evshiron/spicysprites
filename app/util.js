@@ -26,18 +26,18 @@ function OpenFileDialog() {
 
 }
 
-function SaveDirDialog() {
+function OpenDirDialog() {
 
     return new Promise((resolve, reject) => {
 
-        const path = dialog.showSaveDialog({
+        const path = dialog.showOpenDialog({
             properties: [
                 'openDirectory',
             ],
         });
 
-        if(path) {
-            return resolve(path);
+        if(path[0]) {
+            return resolve(path[0]);
         }
         else {
             return reject(new Error('ERROR_OPENING_DIR'));
@@ -78,5 +78,5 @@ function LoadImage(src) {
 }
 
 module.exports = {
-    OpenFileDialog, SaveDirDialog, ReadFileDataURL, LoadImage,
+    OpenFileDialog, OpenDirDialog, ReadFileDataURL, LoadImage,
 };

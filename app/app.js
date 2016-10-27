@@ -6,7 +6,7 @@ var Promise = require('bluebird');
 const $ = require('jquery');
 
 const Color = require('./color');
-const { OpenFileDialog, SaveDirDialog, ReadFileDataURL, LoadImage } = require('./util');
+const { OpenFileDialog, OpenDirDialog, ReadFileDataURL, LoadImage } = require('./util');
 
 class App {
 
@@ -107,8 +107,24 @@ class App {
 
         $('#export').click((event) => {
 
-            SaveDirDialog()
-            .then((path) => this.ExportSprites(path))
+            $('#export-panel').toggle();
+
+        });
+
+        $('#export-select').click((event) => {
+
+            OpenDirDialog()
+            .then((path) => {
+                $('#export-pattern').val(join(path, '{}.png'));
+            });
+
+        });
+
+        $('#export-execute').click((event) => {
+
+            const pattern = $('#export-pattern').val();
+
+            this.ExportSprites(pattern)
             .then(() => {
                 alert('Exported.');
             });
@@ -418,7 +434,7 @@ class App {
 
     }
 
-    ExportSprites(path) {
+    ExportSprites(pattern) {
 
         return new Promise.map(this.boxes, (box, idx) => {
 
@@ -430,13 +446,13 @@ class App {
                 canvas.width = x1 - x0;
                 canvas.height = y1 - y0;
 
-                const roCtx = this.canvas.getContext('2d');
+                const source = this.getImageOnlyCanvas();
 
                 const ctx = canvas.getContext('2d');
 
-                ctx.drawImage(this.canvas, x0, y0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(source, x0, y0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
 
-                outputFile(join(path, `${ idx }.png`), new Buffer(canvas.toDataURL('image/png').split(',')[1], 'base64'), resolve);
+                outputFile(pattern.replace('{}', ''+idx), new Buffer(canvas.toDataURL('image/png').split(',')[1], 'base64'), resolve);
 
             });
 
