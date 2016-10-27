@@ -443,8 +443,9 @@ class App {
                 const [x0, y0, x1, y1] = box;
 
                 const canvas = document.createElement('canvas');
-                canvas.width = x1 - x0;
-                canvas.height = y1 - y0;
+                // +1 for exporting full sprite.
+                canvas.width = x1 - x0 + 1;
+                canvas.height = y1 - y0 + 1;
 
                 const source = this.getImageOnlyCanvas();
 
